@@ -17,7 +17,7 @@
  */
 
 /*
- * random album 0.4
+ * random album 0.5
  *
  * An amarok script that monitors the playlist, and, when it's finished,
  * repopulates it with a random album from the collection. Differently
@@ -86,6 +86,7 @@ var ALBUM_TRACKS =
   + "	randomalbum_album_urls "
   + "WHERE "
   + "	album = {0} "
+  + "	AND url LIKE '%{1}%' "
 
   + "UNION "
 
@@ -97,6 +98,7 @@ var ALBUM_TRACKS =
   + "	randomalbum_album_urls_ex "
   + "WHERE "
   + "	album = {0} "
+  + "	AND url LIKE '%{1}%' "
 
   + "ORDER BY discno, trackno";
 
@@ -211,7 +213,7 @@ function getAlbum(aid)
 	 */
 
 	if (artists.length == 1) {
-		ulist = Amarok.Collection.query(ALBUM_TRACKS.format(aid));
+		ulist = Amarok.Collection.query(ALBUM_TRACKS.format(aid, pathFilter));
 	} else {
 		var artist = Math.floor(Math.random() * (artists.length - 1));
 		artist = parseInt();
@@ -292,15 +294,6 @@ function checkPlaylist()
 	/* 0 == Playing (from AmarokEngineScript.cpp). */
 	if (Amarok.Engine.engineState() != 0) {
 		loadRandom();
-	} else if (loadAttempts < 10) {
-		var timer;
-		timer = new QTimer(Amarok.Window);
-		timer.singleShot = true;
-		timer.timeout.connect(checkPlaylist);
-		timer.start(100);
-		loadAttempts++;
-	} else {
-		Amarok.alert("Too many attempts to load random album, giving up.");
 	}
 }
 
