@@ -17,7 +17,7 @@
  */
 
 /*
- * random album 0.5
+ * Random Album
  *
  * An amarok script that monitors the playlist, and, when it's finished,
  * repopulates it with a random album from the collection. Differently
@@ -196,8 +196,15 @@ String.prototype.format = function()
 
 var enableRandom = (Amarok.Script.readConfig("enable", "true") == "true");
 var pathFilter = Amarok.Script.readConfig("pathFilter", "");
-var lastPlayed = new Array();
 var loadAttempts = 0;
+
+/* Load the saves list of last played albums. */
+var lastPlayed = Amarok.Script.readConfig("lastPlayed", "");
+if (lastPlayed) {
+	lastPlayed = lastPlayed.split(",");
+} else {
+	lastPlayed = new Array();
+}
 
 function getAlbum(aid)
 {
@@ -241,6 +248,7 @@ function shouldPlayAlbum(idx)
 		lastPlayed.shift();
 	}
 	lastPlayed.push(idx);
+	Amarok.Script.writeConfig("lastPlayed", lastPlayed.join(","));
 	return true;
 }
 
