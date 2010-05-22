@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>70</height>
+    <height>100</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -45,6 +45,19 @@
      </property>
     </widget>
    </item>
+   <item row="0" column="1" colspan="3">
+    <widget class="QCheckBox" name="enableRA">
+     <property name="toolTip">
+      <string>If checked, a random album will be automatically loaded whenever the current playlist reaches its end.</string>
+     </property>
+     <property name="whatsThis">
+      <string/>
+     </property>
+     <property name="text">
+      <string>Automatic load new random album</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>
@@ -54,32 +67,12 @@
    <signal>accepted()</signal>
    <receiver>Dialog</receiver>
    <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
    <receiver>Dialog</receiver>
    <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
-    </hint>
-   </hints>
   </connection>
  </connections>
 </ui>

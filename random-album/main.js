@@ -196,7 +196,6 @@ String.prototype.format = function()
 
 var enableRandom = (Amarok.Script.readConfig("enable", "true") == "true");
 var pathFilter = Amarok.Script.readConfig("pathFilter", "");
-var loadAttempts = 0;
 
 /* Load the saves list of last played albums. */
 var lastPlayed = Amarok.Script.readConfig("lastPlayed", "");
@@ -277,33 +276,15 @@ function loadRandom()
 {
 	Amarok.Playlist.clearPlaylist();
 	randomize();
+}
+
+
+function playRandom()
+{
+	loadRandom();
 	Amarok.Playlist.playByIndex(0);
 }
 
-
-function toggleEnable()
-{
-	enableRandom = !enableRandom;
-	Amarok.Window.Statusbar.shortMessage("Random Album enabled: " + enableRandom);
-	Amarok.Script.writeConfig("enable", "" + enableRandom);
-
-	if (enableRandom && Amarok.Engine.engineState() != 0) {
-		loadRandom();
-	}
-}
-
-
-/**
- * Loads a random album iff amarok is not currently playing. Otherwise
- * try again a little bit later, up to a certain number of times.
- */
-function checkPlaylist()
-{
-	/* 0 == Playing (from AmarokEngineScript.cpp). */
-	if (Amarok.Engine.engineState() != 0) {
-		loadRandom();
-	}
-}
 
 /**
  * If the track that just finished is the last in the playlist,
@@ -315,11 +296,22 @@ function trackFinished()
 	if (enableRandom) {
 		var active = Amarok.Playlist.activeIndex();
 		if (active == -1 || active == Amarok.Playlist.totalTrackCount() - 1) {
+			var stopAfter = false;
 			var timer;
-			loadAttempts = 0;
+
+			try {
+				stopAfter = Amarok.Playlist.stopAfterCurrent();
+			} catch (err) {
+				/* Just ignore. We're probably running on pre-2.3.1. */
+			}
+
 			timer = new QTimer(Amarok.Window);
 			timer.singleShot = true;
-			timer.timeout.connect(checkPlaylist);
+			if (stopAfter) {
+				timer.timeout.connect(loadRandom);
+			} else {
+				timer.timeout.connect(playRandom);
+			}
 			timer.start(100);
 		}
 	}
@@ -337,8 +329,11 @@ function showConfigDialog()
 
 	function ok()
 	{
+		enableRandom = dialog.enableRA.checked;
 		pathFilter = dialog.pathFilter.text;
+		Amarok.Script.writeConfig("enable", enableRandom ? "true" : "false");
 		Amarok.Script.writeConfig("pathFilter", pathFilter);
+		dialod.close();
 	}
 
 	function search()
@@ -351,6 +346,7 @@ function showConfigDialog()
 		}
 	}
 
+	dialog.enableRA.setChecked(enableRandom);
 	dialog.pathFilter.text = pathFilter;
 	dialog.buttonBox.accepted.connect(ok);
 	dialog.searchBtn['clicked()'].connect(search);
@@ -368,22 +364,16 @@ Amarok.Collection.query(ALBUM_VIEW_2);
 Amarok.Engine.trackFinished.connect(trackFinished);
 
 if (Amarok.Window.addToolsMenu("rand_album_load",
-							   "Load Random Album",
+							   "Play Random Album",
 							   "media-album-shuffle-amarok")) {
 	Amarok.Window.ToolsMenu.rand_album_load['triggered()']
-		.connect(loadRandom);
+		.connect(playRandom);
 }
 if (Amarok.Window.addToolsMenu("rand_album_enqueue",
 							   "Enqueue Random Album",
 							   "media-album-shuffle-amarok")) {
 	Amarok.Window.ToolsMenu.rand_album_enqueue['triggered()']
 		.connect(randomize);
-}
-if (Amarok.Window.addToolsMenu("rand_album_toggle_enable",
-							   "Enable / Disable Random Album",
-							   "media-album-shuffle-amarok")) {
-	Amarok.Window.ToolsMenu.rand_album_toggle_enable['triggered()']
-		.connect(toggleEnable);
 }
 
 if (Amarok.Window.addSettingsMenu("rand_album_settings",
