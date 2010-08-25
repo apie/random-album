@@ -292,6 +292,7 @@ function playRandom()
 	var timer = new QTimer(Amarok.Window);
 	timer.singleShot = true;
 	timer.timeout.connect(startPlaying);
+	timer.start(100);
 }
 
 
