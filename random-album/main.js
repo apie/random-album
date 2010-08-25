@@ -279,10 +279,19 @@ function loadRandom()
 }
 
 
+function startPlaying()
+{
+	Amarok.Playlist.playByIndex(0);
+}
+
+
 function playRandom()
 {
 	loadRandom();
-	Amarok.Playlist.playByIndex(0);
+
+	var timer = new QTimer(Amarok.Window);
+	timer.singleShot = true;
+	timer.timeout.connect(startPlaying);
 }
 
 
@@ -308,6 +317,7 @@ function trackFinished()
 			timer = new QTimer(Amarok.Window);
 			timer.singleShot = true;
 			if (stopAfter) {
+				Amarok.Playlist.setStopAfterCurrent(false);
 				timer.timeout.connect(loadRandom);
 			} else {
 				timer.timeout.connect(playRandom);
