@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Marcelo Vanzin (vanza@users.sourceforge.net)
+ * Copyright (C) 2010 Ghislain Mary
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -65,6 +66,7 @@ var RANDOM_ALBUM_ID =
   + "	randomalbum_album_urls "
   + "WHERE "
   + "	url LIKE '%{0}%' "
+  + "	AND genre IN ({1}) "
 
   + "UNION "
 
@@ -74,6 +76,7 @@ var RANDOM_ALBUM_ID =
   + "	randomalbum_album_urls_ex "
   + "WHERE "
   + "	url LIKE '%{0}%' "
+  + "	AND genre IN ({1}) "
 
   + "ORDER BY RAND() LIMIT 1";
 
@@ -145,6 +148,7 @@ var ALBUM_VIEW_1 =
   + "   , CONCAT('file://', devices.lastmountpoint, SUBSTR(urls.rpath, 2)) as url "
   + "   , tracks.discnumber as discno "
   + "	, tracks.tracknumber as trackno "
+  + "	, tracks.genre as genre "
   + "FROM "
   + "   albums, tracks, urls, devices "
   + "WHERE "
@@ -162,6 +166,7 @@ var ALBUM_VIEW_2 =
   + "   , CONCAT('file://', SUBSTR(urls.rpath, 2)) as url "
   + "   , tracks.discnumber as discno "
   + "   , tracks.tracknumber as trackno "
+  + "   , tracks.genre as genre "
   + "FROM "
   + "   albums, tracks, urls "
   + "WHERE "
@@ -176,6 +181,19 @@ var ALBUM_ARTIST_COUNT =
   + "	albums "
   + "WHERE "
   + "	id = {0}";
+
+var GENRES =
+	"SELECT "
+  + "	id, name "
+  + "FROM "
+  + "	genres "
+  + "ORDER BY name";
+
+var GENRE_IDS =
+	"SELECT "
+  + "	id "
+  + "FROM "
+  + "	genres ";
 
 /*
  * Format function to keep my sanity instead of using string
@@ -204,6 +222,15 @@ if (lastPlayed) {
 } else {
 	lastPlayed = new Array();
 }
+
+/* Load the genres from which to choose random albums. */
+var genresFilter = Amarok.Script.readConfig("genresFilter", "");
+if (genresFilter) {
+	genresFilter = genresFilter.split(",");
+} else {
+	genresFilter = new Array();
+}
+
 
 function getAlbum(aid)
 {
@@ -257,8 +284,12 @@ function randomize()
 	/* Get a random album index that hasn't been played recently. */
 	var idx;
 	var tries = 10;
+	var genresStr = genresFilter.length ? genresFilter.join(", ")
+										: GENRE_IDS;
+
 	do {
-		idx = Amarok.Collection.query(RANDOM_ALBUM_ID.format(pathFilter))[0];
+		idx = Amarok.Collection.query(RANDOM_ALBUM_ID.format(pathFilter,
+															 genresStr))[0];
 		tries--;
 	} while (!shouldPlayAlbum(idx) && tries > 0);
 
@@ -336,15 +367,42 @@ function showConfigDialog()
 {
 	var loader = new QUiLoader(Amarok.Window);
 	var file = new QFile(Amarok.Info.scriptPath() + "/rasettings.ui", loader);
+
+	var genres = Amarok.Collection.query(GENRES);
+	var genreIds = new Array();
+	var genreNames = new Array();
+
+	for (var i = 0; i < genres.length; i += 2) {
+		var name = genres[i+1];
+		genreIds.push(genres[i]);
+		genreNames.push(name ? name : "(Unspecified)");
+	}
+
+	var genresModel = new QStandardItemModel(genreIds.length, 2);
+	for (var row = 0; row < genreIds.length; row++) {
+		genresModel.setItem(row, 0, new QStandardItem(genreIds[row]));
+		genresModel.setItem(row, 1, new QStandardItem(genreNames[row]));
+	}
+
 	var dialog = loader.load(file, Amarok.Window);
+
+	function addGenre(item)
+	{
+		var idx = genreNames.indexOf(item.data());
+		genresFilter.push(genreIds[idx]);
+	}
 
 	function ok()
 	{
 		enableRandom = dialog.enableRA.checked;
 		pathFilter = dialog.pathFilter.text;
+		var selectedIndexes = dialog.genresList.selectionModel().selectedIndexes();
+		genresFilter = new Array();
+		selectedIndexes.forEach(addGenre);
 		Amarok.Script.writeConfig("enable", enableRandom ? "true" : "false");
 		Amarok.Script.writeConfig("pathFilter", pathFilter);
-		dialod.close();
+		Amarok.Script.writeConfig("genresFilter", genresFilter.join(","));
+		dialog.close();
 	}
 
 	function search()
@@ -359,6 +417,15 @@ function showConfigDialog()
 
 	dialog.enableRA.setChecked(enableRandom);
 	dialog.pathFilter.text = pathFilter;
+	dialog.genresList.setModel(genresModel);
+	dialog.genresList.modelColumn = 1;
+	dialog.genresList.selectionModel().clear();
+	for (var i = 0; i < genresModel.rowCount(); i++) {
+		if (genresFilter.indexOf(genresModel.index(i, 0).data()) >= 0) {
+			dialog.genresList.selectionModel().select(genresModel.index(i, 1),
+													  QItemSelectionModel.Select);
+		}
+	}
 	dialog.buttonBox.accepted.connect(ok);
 	dialog.searchBtn['clicked()'].connect(search);
 	dialog.exec();
