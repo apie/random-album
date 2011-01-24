@@ -1,37 +1,27 @@
 * Version 0.9:
-. monitor track changes, so that skipping the last track on a playlist
-  will also make the script load a new album. Suggested by
-  kronos003 (irc.freenode.net).
+. monitor track changes, so that skipping the last track on a playlist will also make the script load a new album. Suggested by kronos003 (irc.freenode.net).
 
 * Version 0.8:
 . add support for genre filtering (contributed by Ghislain Mary)
 
 
 * Version 0.7:
-. minor update to work around an issue where playback wouldn't start
-  when loading a new album. Delay the start of the playback a little
-  to let amarok's UI properly refresh.
+. minor update to work around an issue where playback wouldn't start when loading a new album. Delay the start of the playback a little to let amarok's UI properly refresh.
 
 
 * Version 0.6:
-. persist the list of played albums so that the same album isn't played
-  after restarting amarok.
-. if running in amarok 2.3.1, respect the "stop playing after current
-  track" setting.
+. persist the list of played albums so that the same album isn't played after restarting amarok.
+. if running in amarok 2.3.1, respect the "stop playing after current track" setting.
 
 
 * Version 0.5:
-. fix an issue with path filtering not doing what it was supposed to do
-  in some cases
-. remove some code that caused the script to freak out when stopping
-  playback when the last track of a playlist was active.
+. fix an issue with path filtering not doing what it was supposed to do in some cases
+. remove some code that caused the script to freak out when stopping playback when the last track of a playlist was active.
 
 
 * Version 0.4:
-. Reworked the SQL queries; they should work better on databases that
-  did not look like mine.
-. Added option to filter the albums being loaded according to a string
-  (matched against the album path).
+. Reworked the SQL queries; they should work better on databases that did not look like mine.
+. Added option to filter the albums being loaded according to a string (matched against the album path).
 
 
 * Version 0.3:
@@ -47,9 +37,6 @@ Initial version. What works:
 . loading and enqueueing a random album.
 
 Known issues:
-. the playlist sometimes doesn't repaint correctly after an update.
-  Clicking somewhere on the playlist fixes it (looks like an Amarok
-  problem).
-. only tested on my setup, so I don't know how it will work with
-  collections spanning different devices, etc.
+. the playlist sometimes doesn't repaint correctly after an update. Clicking somewhere on the playlist fixes it (looks like an Amarok problem).
+. only tested on my setup, so I don't know how it will work with collections spanning different devices, etc.
 
