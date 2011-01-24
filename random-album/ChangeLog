@@ -1,6 +1,7 @@
 * Version 0.9:
 . monitor track changes, so that skipping the last track on a playlist
-  will also make the script load a new album.
+  will also make the script load a new album. Suggested by
+  kronos003 (irc.freenode.net).
 
 * Version 0.8:
 . add support for genre filtering (contributed by Ghislain Mary)
