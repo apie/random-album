@@ -12,6 +12,6 @@ X-KDE-PluginInfo-Name=Random Album
 X-KDE-PluginInfo-Version=0.9
 X-KDE-PluginInfo-Category=Generic
 X-KDE-PluginInfo-Depends=Amarok2.0
-X-KDE-PluginInfo-License=LGPL
+X-KDE-PluginInfo-License=GPL
 X-KDE-PluginInfo-EnabledByDefault=false
 
