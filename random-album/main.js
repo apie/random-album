@@ -214,6 +214,8 @@ String.prototype.format = function()
 
 var enableRandom = (Amarok.Script.readConfig("enable", "true") == "true");
 var pathFilter = Amarok.Script.readConfig("pathFilter", "");
+var monitorTrackChanges = (Amarok.Script.readConfig("monitorTrackChanges",
+													"true") == "true");
 
 /* Load the saves list of last played albums. */
 var lastPlayed = Amarok.Script.readConfig("lastPlayed", "");
@@ -327,35 +329,84 @@ function playRandom()
 }
 
 
+function doRandomAlbum()
+{
+	var stopAfter = false;
+	var timer;
+
+	try {
+		stopAfter = Amarok.Playlist.stopAfterCurrent();
+	} catch (err) {
+		/* Just ignore. We're probably running on pre-2.3.1. */
+	}
+
+	timer = new QTimer(Amarok.Window);
+	timer.singleShot = true;
+	if (stopAfter) {
+		Amarok.Playlist.setStopAfterCurrent(false);
+		timer.timeout.connect(loadRandom);
+	} else {
+		timer.timeout.connect(playRandom);
+	}
+	timer.start(100);
+}
+
+
+/**
+ * Callback for checking whether a random album will be loaded on track
+ * change. We check the engine state to make sure it's still playing
+ * (meaning the user didn't stop playback of the last track), and that
+ * the currently playing track is 0 (meaning the user didn't go back
+ * in the list or chose some other track).
+ *
+ * Unfortunately, it doesn't look like there's a way to differentiate
+ * "skip last track" and "start playing the first track", so both will
+ * be treated as triggers for loading a random album. If anyone does not
+ * like this behavior, there's an option called "monitorTrackChanges"
+ * that can be set to "false" in the amarokrc file (it's not exposed
+ * in the script's configuration UI).
+ */
+function trackChanged()
+{
+	var active = Amarok.Playlist.activeIndex();
+	if (enableRandom && active == 0 && Amarok.Engine.engineState() == 0) {
+		doRandomAlbum();
+	}
+}
+
+
+/**
+ * Track changed callback. If the active track is the last one in the
+ * playlist, schedule a function to run "soon" that will maybe load a
+ * random album.
+ */
+function trackChangedCb()
+{
+	var active = Amarok.Playlist.activeIndex();
+	if (enableRandom && monitorTrackChanges &&
+		active == Amarok.Playlist.totalTrackCount() - 1) {
+		var timer = new QTimer(Amarok.Window);
+		timer.singleShot = true;
+		timer.timeout.connect(trackChanged);
+		timer.start(100);
+	}
+}
+
+
 /**
  * If the track that just finished is the last in the playlist,
- * schedule a callback to load a random album as soon as amarok
- * really stops playing the current track.
+ * load a random album.
+ *
+ * Amarok doesn't call this callback when stopping playback manually.
+ * So it's safe to have both this callback and the track changed
+ * callback enabled simultaneously.
  */
-function trackFinished()
+function trackFinishedCb()
 {
-	if (enableRandom) {
-		var active = Amarok.Playlist.activeIndex();
-		if (active == -1 || active == Amarok.Playlist.totalTrackCount() - 1) {
-			var stopAfter = false;
-			var timer;
-
-			try {
-				stopAfter = Amarok.Playlist.stopAfterCurrent();
-			} catch (err) {
-				/* Just ignore. We're probably running on pre-2.3.1. */
-			}
-
-			timer = new QTimer(Amarok.Window);
-			timer.singleShot = true;
-			if (stopAfter) {
-				Amarok.Playlist.setStopAfterCurrent(false);
-				timer.timeout.connect(loadRandom);
-			} else {
-				timer.timeout.connect(playRandom);
-			}
-			timer.start(100);
-		}
+	var active = Amarok.Playlist.activeIndex();
+	if (enableRandom &&
+		(active == -1 || active == Amarok.Playlist.totalTrackCount() - 1)) {
+		doRandomAlbum();
 	}
 }
 
@@ -439,7 +490,8 @@ function showConfigDialog()
 Amarok.Collection.query(ALBUM_VIEW_1);
 Amarok.Collection.query(ALBUM_VIEW_2);
 
-Amarok.Engine.trackFinished.connect(trackFinished);
+Amarok.Engine.trackChanged.connect(trackChangedCb);
+Amarok.Engine.trackFinished.connect(trackFinishedCb);
 
 if (Amarok.Window.addToolsMenu("rand_album_load",
 							   "Play Random Album",
