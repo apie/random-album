@@ -1,3 +1,6 @@
+* Version 1.0:
+. some tweaking to the monitoring code to make the script behave better in amarok 2.4.
+
 * Version 0.9:
 . monitor track changes, so that skipping the last track on a playlist will also make the script load a new album. Suggested by kronos003 (irc.freenode.net).
 

@@ -195,6 +195,8 @@ var GENRE_IDS =
   + "FROM "
   + "	genres ";
 
+//}}}
+
 /*
  * Format function to keep my sanity instead of using string
  * concatenation.
@@ -210,12 +212,23 @@ String.prototype.format = function()
 						});
 }
 
-// }}}
+
+/*
+ * Returns a function that will call the given function with the given
+ * arguments when invoked.
+ */
+Function.prototype.bind = function()
+{
+	var func = this;
+	var args = arguments;
+	return function() {
+		return func.apply(func, args);
+	}
+}
+
 
 var enableRandom = (Amarok.Script.readConfig("enable", "true") == "true");
 var pathFilter = Amarok.Script.readConfig("pathFilter", "");
-var monitorTrackChanges = (Amarok.Script.readConfig("monitorTrackChanges",
-													"true") == "true");
 
 /* Load the saves list of last played albums. */
 var lastPlayed = Amarok.Script.readConfig("lastPlayed", "");
@@ -359,17 +372,13 @@ function doRandomAlbum()
  * the currently playing track is 0 (meaning the user didn't go back
  * in the list or chose some other track).
  *
- * Unfortunately, it doesn't look like there's a way to differentiate
- * "skip last track" and "start playing the first track", so both will
- * be treated as triggers for loading a random album. If anyone does not
- * like this behavior, there's an option called "monitorTrackChanges"
- * that can be set to "false" in the amarokrc file (it's not exposed
- * in the script's configuration UI).
+ * @param	track	Index of the track that triggered the callback.
  */
-function trackChanged()
+function trackChanged(track)
 {
 	var active = Amarok.Playlist.activeIndex();
-	if (enableRandom && active == 0 && Amarok.Engine.engineState() == 0) {
+	if ((active == -1 || active == 0) &&
+		(track == -1 || track == Amarok.Playlist.totalTrackCount() - 1)) {
 		doRandomAlbum();
 	}
 }
@@ -383,15 +392,13 @@ function trackChanged()
 function trackChangedCb()
 {
 	var active = Amarok.Playlist.activeIndex();
-	if (enableRandom && monitorTrackChanges &&
-		active == Amarok.Playlist.totalTrackCount() - 1) {
+	if (enableRandom && active == Amarok.Playlist.totalTrackCount() - 1) {
 		var timer = new QTimer(Amarok.Window);
 		timer.singleShot = true;
-		timer.timeout.connect(trackChanged);
+		timer.timeout.connect(trackChanged.bind(active));
 		timer.start(100);
 	}
 }
-
 
 /**
  * If the track that just finished is the last in the playlist,
@@ -406,7 +413,10 @@ function trackFinishedCb()
 	var active = Amarok.Playlist.activeIndex();
 	if (enableRandom &&
 		(active == -1 || active == Amarok.Playlist.totalTrackCount() - 1)) {
-		doRandomAlbum();
+		var timer = new QTimer(Amarok.Window);
+		timer.singleShot = true;
+		timer.timeout.connect(trackChanged.bind(active));
+		timer.start(100);
 	}
 }
 
@@ -471,12 +481,14 @@ function showConfigDialog()
 	dialog.genresList.setModel(genresModel);
 	dialog.genresList.modelColumn = 1;
 	dialog.genresList.selectionModel().clear();
+
 	for (var i = 0; i < genresModel.rowCount(); i++) {
 		if (genresFilter.indexOf(genresModel.index(i, 0).data()) >= 0) {
 			dialog.genresList.selectionModel().select(genresModel.index(i, 1),
 													  QItemSelectionModel.Select);
 		}
 	}
+
 	dialog.buttonBox.accepted.connect(ok);
 	dialog.searchBtn['clicked()'].connect(search);
 	dialog.exec();
@@ -505,11 +517,9 @@ if (Amarok.Window.addToolsMenu("rand_album_enqueue",
 	Amarok.Window.ToolsMenu.rand_album_enqueue['triggered()']
 		.connect(randomize);
 }
-
 if (Amarok.Window.addSettingsMenu("rand_album_settings",
 								  "Random Album Settings",
 								  "media-album-shuffle-amarok")) {
 	Amarok.Window.SettingsMenu.rand_album_settings['triggered()']
 		.connect(showConfigDialog);
 }
-
