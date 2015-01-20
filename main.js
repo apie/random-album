@@ -246,6 +246,17 @@ if (genresFilter) {
 	genresFilter = new Array();
 }
 
+/*
+ * Whether to stop playback after the current track. Normally you'd be
+ * able to check this in the "track changed" callback when the current
+ * track finishes playing, but the callbacks seem to be called at
+ * different times in different versions of amarok, so that approach
+ * doesn't always work.
+ *
+ * This variable is kept updated by a callback that monitors the current
+ * track's playback - see `trackSeekedCb`.
+ */
+var stopAfter = false;
 
 function getAlbum(aid)
 {
@@ -341,27 +352,31 @@ function playRandom()
 	timer.start(100);
 }
 
+function checkStopAfter()
+{
+	try {
+		stopAfter = Amarok.Playlist.stopAfterCurrent();
+		Amarok.debug("STOP AFTER IS ON? {0}".format(stopAfter));
+	} catch (err) {
+		/* We're probably running on pre-2.3.1. */
+		stopAfter = false;
+	}
+}
 
 function doRandomAlbum()
 {
-	var stopAfter = false;
-	var timer;
-
-	try {
-		stopAfter = Amarok.Playlist.stopAfterCurrent();
-	} catch (err) {
-		/* Just ignore. We're probably running on pre-2.3.1. */
-	}
-
-	timer = new QTimer(Amarok.Window);
+	var timer = new QTimer(Amarok.Window);
 	timer.singleShot = true;
 	if (stopAfter) {
+	  Amarok.debug("LOADING NEW RANDOM ALBUM");
 		Amarok.Playlist.setStopAfterCurrent(false);
 		timer.timeout.connect(loadRandom);
 	} else {
+	  Amarok.debug("PLAYING NEW RANDOM ALBUM");
 		timer.timeout.connect(playRandom);
 	}
 	timer.start(100);
+	stopAfter = false;
 }
 
 
@@ -392,7 +407,8 @@ function trackChanged(track)
 function trackChangedCb()
 {
 	var active = Amarok.Playlist.activeIndex();
-	if (enableRandom && active == Amarok.Playlist.totalTrackCount() - 1) {
+	if (enableRandom && active == Amarok.Playlist.totalTrackCount() - 1 &&
+	    !stopAfter) {
 		var timer = new QTimer(Amarok.Window);
 		timer.singleShot = true;
 		timer.timeout.connect(trackChanged.bind(active));
@@ -420,6 +436,14 @@ function trackFinishedCb()
 	}
 }
 
+function trackSeekedCb(pos) {
+  var remaining = Amarok.Engine.currentTrack().length -
+    Amarok.Engine.trackPositionMs();
+  if (remaining <= 10000) {
+    Amarok.debug("CHECKING STOP AFTER, TRACK ALMOST DONE.");
+    checkStopAfter();
+  }
+}
 
 /**
  * Shows the dialog for configuring random album settings.
@@ -504,6 +528,7 @@ Amarok.Collection.query(ALBUM_VIEW_2);
 
 Amarok.Engine.trackChanged.connect(trackChangedCb);
 Amarok.Engine.trackFinished.connect(trackFinishedCb);
+Amarok.Engine.trackSeeked.connect(trackSeekedCb);
 
 if (Amarok.Window.addToolsMenu("rand_album_load",
 							   "Play Random Album",
