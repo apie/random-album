@@ -67,6 +67,7 @@ var RANDOM_ALBUM_ID =
   + "WHERE "
   + "	url LIKE '%{0}%' "
   + "	AND genre IN ({1}) "
+  + " {2}"
 
   + "UNION "
 
@@ -77,6 +78,7 @@ var RANDOM_ALBUM_ID =
   + "WHERE "
   + "	url LIKE '%{0}%' "
   + "	AND genre IN ({1}) "
+  + " {2}"
 
   + "ORDER BY RAND() LIMIT 1";
 
@@ -149,12 +151,15 @@ var ALBUM_VIEW_1 =
   + "   , tracks.discnumber as discno "
   + "	, tracks.tracknumber as trackno "
   + "	, tracks.genre as genre "
+	+ " , statistics.playcount as playcount "
+	+ " , statistics.accessdate as played "
   + "FROM "
-  + "   albums, tracks, urls, devices "
+  + "   albums, tracks, urls, devices, statistics "
   + "WHERE "
   + "	tracks.album = albums.id "
   + "   AND tracks.url = urls.id "
-  + "   AND devices.id = urls.deviceid ";
+  + "   AND devices.id = urls.deviceid "
+  + "   AND tracks.id = statistics.id ";
 
 var ALBUM_VIEW_2 =
 	"CREATE OR REPLACE VIEW "
@@ -167,12 +172,15 @@ var ALBUM_VIEW_2 =
   + "   , tracks.discnumber as discno "
   + "   , tracks.tracknumber as trackno "
   + "   , tracks.genre as genre "
+	+ " , statistics.playcount as playcount "
+	+ " , statistics.accessdate as played "
   + "FROM "
-  + "   albums, tracks, urls "
+  + "   albums, tracks, urls , statistics "
   + "WHERE "
   + "	tracks.album = albums.id "
   + "   AND tracks.url = urls.id "
-  + "   AND urls.deviceid = -1";
+  + "   AND urls.deviceid = -1"
+  + "   AND tracks.id = statistics.id ";
 
 var ALBUM_ARTIST_COUNT =
 	"SELECT DISTINCT "
@@ -229,6 +237,38 @@ Function.prototype.bind = function()
 
 var enableRandom = (Amarok.Script.readConfig("enable", "true") == "true");
 var pathFilter = Amarok.Script.readConfig("pathFilter", "");
+
+var enableFilter_playcount= (Amarok.Script.readConfig("enableFilter_playcount", "false") == "true");
+var enableFilter_lastyear = (Amarok.Script.readConfig("enableFilter_lastyear", "false") == "true");
+var enableFilter_never = (Amarok.Script.readConfig("enableFilter_never", "false") == "true");
+
+var query_never;
+var query_playcount;
+var query_lastyear;
+var query_additional_filters;
+
+function updatefilters(){
+				/* If nothing is selected, simplify query. */
+				if (!(enableFilter_never || enableFilter_playcount || enableFilter_lastyear)){
+					query_additional_filters = "";
+				} else {
+								if (enableFilter_never){
+											query_never = "trim(coalesce(played, '')) = ''";}
+								else {query_never = "0"; }
+								if (enableFilter_playcount){
+											query_playcount = "playcount = 0"; }
+								else {query_playcount = "0"; }
+								if (enableFilter_lastyear){
+											var today = Math.floor(Date.now() / 1000);
+											var year_ago = (today-3600*24*365);
+											query_lastyear = "played < "+year_ago; }
+								else {query_lastyear = "0"; }
+								query_additional_filters = " AND ( {0} OR {1} OR {2} ) ".format(query_never,
+																																								query_playcount,
+																																								query_lastyear);
+				}
+}
+updatefilters();
 
 /* Load the saves list of last played albums. */
 var lastPlayed = Amarok.Script.readConfig("lastPlayed", "");
@@ -315,7 +355,8 @@ function randomize()
 
 	do {
 		idx = Amarok.Collection.query(RANDOM_ALBUM_ID.format(pathFilter,
-															 genresStr))[0];
+															 genresStr,
+															 query_additional_filters))[0];
 		tries--;
 	} while (!shouldPlayAlbum(idx) && tries > 0);
 
@@ -480,11 +521,18 @@ function showConfigDialog()
 	function ok()
 	{
 		enableRandom = dialog.enableRA.checked;
+		enableFilter_never = dialog.enableFilter_never.checked;
+		enableFilter_lastyear = dialog.enableFilter_lastyear.checked;
+		enableFilter_playcount = dialog.enableFilter_playcount.checked;
+		updatefilters();
 		pathFilter = dialog.pathFilter.text;
 		var selectedIndexes = dialog.genresList.selectionModel().selectedIndexes();
 		genresFilter = new Array();
 		selectedIndexes.forEach(addGenre);
 		Amarok.Script.writeConfig("enable", enableRandom ? "true" : "false");
+		Amarok.Script.writeConfig("enableFilter_never", enableFilter_never ? "true" : "false");
+		Amarok.Script.writeConfig("enableFilter_lastyear", enableFilter_lastyear ? "true" : "false");
+		Amarok.Script.writeConfig("enableFilter_playcount", enableFilter_playcount ? "true" : "false");
 		Amarok.Script.writeConfig("pathFilter", pathFilter);
 		Amarok.Script.writeConfig("genresFilter", genresFilter.join(","));
 		dialog.close();
@@ -501,6 +549,9 @@ function showConfigDialog()
 	}
 
 	dialog.enableRA.setChecked(enableRandom);
+	dialog.enableFilter_never.setChecked(enableFilter_never);
+	dialog.enableFilter_lastyear.setChecked(enableFilter_lastyear);
+	dialog.enableFilter_playcount.setChecked(enableFilter_playcount);
 	dialog.pathFilter.text = pathFilter;
 	dialog.genresList.setModel(genresModel);
 	dialog.genresList.modelColumn = 1;

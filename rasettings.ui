@@ -6,14 +6,17 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>338</width>
-    <height>284</height>
+    <width>363</width>
+    <height>351</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
+   <property name="fieldGrowthPolicy">
+    <enum>QFormLayout::ExpandingFieldsGrow</enum>
+   </property>
    <item row="0" column="0">
     <widget class="QCheckBox" name="enableRA">
      <property name="toolTip">
@@ -69,13 +72,41 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="0">
+   <item row="7" column="0">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QCheckBox" name="enableFilter_lastyear">
+     <property name="text">
+      <string>Unplayed for last year</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QCheckBox" name="enableFilter_never">
+     <property name="text">
+      <string>Never played</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QCheckBox" name="enableFilter_playcount">
+     <property name="text">
+      <string>Playcount = 0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Additional filters (OR)</string>
      </property>
     </widget>
    </item>
