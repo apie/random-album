@@ -318,7 +318,7 @@ function getAlbum(aid)
 		artist = parseInt();
 		ulist = Amarok.Collection.query(ALBUM_ARTIST_TRACKS.format(aid, artist));
 	}
-	Amarok.debug("New random album, {0} tracks.".format(ulist.length));
+	Amarok.debug("New random album, {0} tracks.".format(ulist.length/3));
 
 	tlist = new Array();
 	for (var i = 0; i < ulist.length; i+= 3) {
