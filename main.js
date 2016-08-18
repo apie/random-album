@@ -234,7 +234,6 @@ Function.prototype.bind = function()
 	}
 }
 
-
 var enableRandom = (Amarok.Script.readConfig("enable", "true") == "true");
 var pathFilter = Amarok.Script.readConfig("pathFilter", "");
 
@@ -365,7 +364,8 @@ function randomize()
 	var list = getAlbum(idx);
 	for (var i = 0; i < list.length; i++) {
 		Amarok.debug("Loading track " + list[i]);
-		Amarok.Playlist.addMedia(new QUrl(list[i]));
+		var url = QUrl.fromLocalFile(list[i].substring(7));
+		Amarok.Playlist.addMedia(url);
 	}
 }
 
